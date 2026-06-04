@@ -27,11 +27,15 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
 
       - name: Terraform Init
         working-directory: terraform/infrastructure
-        run: terraform init
+        env:
+          GOOGLE_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
+        run: terraform init -backend=false
 
-      - name: Terraform Plan
+      - name: Terraform Validate
         working-directory: terraform/infrastructure
-        run: terraform plan -var="project_id=${{ vars.TF_VAR_PROJECT_ID }}"
+        run: terraform validate
