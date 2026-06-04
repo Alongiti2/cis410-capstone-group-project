@@ -18,16 +18,18 @@
 ---
 
 ## Team Members
-
 | Role | Name | GitHub |
 |------|------|--------|
-| Project Lead | Delphin Alongiti Zaki | Alongiti2 |
-| Backend Engineer | Blessing Zaki | TBD |
-| Frontend Engineer | Rebecca Zaki | TBD |
-| DevSecOps Engineer | John Zaki | TBD |
-| Security Reviewer | James Zaki & Jovial Zaki | TBD |
+| Project Lead | Abduba | bez098 |
+| Backend Engineer | Sayed | nawidhashimi786-ui |
+| Frontend Engineer | Seela | Seelalankara |
+| DevSecOps Engineer | Asefa | asefa-belete |
+| Security Reviewer | Elis | sudo-EM |
+| Security Reviewer | Delphin Alongiti Zaki | Alongiti2 |
 
----
+|
+
+
 
 ## Tech Stack
 
