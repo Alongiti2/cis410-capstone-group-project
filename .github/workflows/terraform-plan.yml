@@ -1,4 +1,4 @@
-name: Terraform Plan
+name: CI/CD Pipeline
 
 on:
   push:
@@ -10,32 +10,65 @@ permissions:
   contents: read
   id-token: write
 
-jobs:
-  terraform-plan:
-    name: Terraform Plan
-    runs-on: ubuntu-latest
+env:
+  PROJECT_ID: cis410-delphin
+  REGION: us-central1
+  SERVICE_NAME: cis410-flask-app
+  IMAGE: us-central1-docker.pkg.dev/cis410-delphin/cis410-repo/flask-app
 
+jobs:
+  build-scan-deploy:
+    name: Build Scan Deploy
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r app/requirements.txt
+
+      - name: Snyk SAST scan
+        uses: snyk/actions/python@master
+        continue-on-error: false
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=critical
+
       - name: Authenticate to GCP via OIDC
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
-          service_account: ${{ vars.SA_EMAIL }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.SA_EMAIL }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.5.0"
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-      - name: Terraform Init
-        working-directory: terraform/infrastructure
+      - name: Build Docker image
+        run: docker build -t us-central1-docker.pkg.dev/cis410-delphin/cis410-repo/flask-app:${{ github.sha }} ./app
+
+      - name: Snyk container scan
+        uses: snyk/actions/docker@master
+        continue-on-error: false
         env:
-          GOOGLE_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
-        run: terraform init -backend=false
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: us-central1-docker.pkg.dev/cis410-delphin/cis410-repo/flask-app:${{ github.sha }}
+          args: --severity-threshold=critical
 
-      - name: Terraform Validate
-        working-directory: terraform/infrastructure
-        run: terraform validate
+      - name: Push to Artifact Registry
+        run: docker push us-central1-docker.pkg.dev/cis410-delphin/cis410-repo/flask-app:${{ github.sha }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy cis410-flask-app \
+            --image us-central1-docker.pkg.dev/cis410-delphin/cis410-repo/flask-app:${{ github.sha }} \
+            --region us-central1 \
+            --platform managed \
+            --allow-unauthenticated \
+            --quiet
