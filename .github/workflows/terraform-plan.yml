@@ -33,11 +33,12 @@ jobs:
         run: pip install -r app/requirements.txt
 
       - name: Snyk SAST scan
-        working-directory: app
-        run: |
-          npm install -g snyk
-          snyk auth ${{ secrets.SNYK_TOKEN }}
-          snyk test --severity-threshold=critical || true
+        uses: snyk/actions/python-3.10@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --file=app/requirements.txt --severity-threshold=critical
 
       - name: Authenticate to GCP via OIDC
         uses: google-github-actions/auth@v2
@@ -52,9 +53,13 @@ jobs:
         run: docker build -t us-central1-docker.pkg.dev/cis410-delphin/cis410-repo/flask-app:${{ github.sha }} ./app
 
       - name: Snyk container scan
-        run: |
-          snyk auth ${{ secrets.SNYK_TOKEN }}
-          snyk container test us-central1-docker.pkg.dev/cis410-delphin/cis410-repo/flask-app:${{ github.sha }} --severity-threshold=critical || true
+        uses: snyk/actions/docker@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: us-central1-docker.pkg.dev/cis410-delphin/cis410-repo/flask-app:${{ github.sha }}
+          args: --severity-threshold=critical
 
       - name: Push to Artifact Registry
         run: docker push us-central1-docker.pkg.dev/cis410-delphin/cis410-repo/flask-app:${{ github.sha }}
