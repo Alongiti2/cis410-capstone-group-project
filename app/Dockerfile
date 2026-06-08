@@ -3,5 +3,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY main.py .
-EXPOSE 8080
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "main:app"]
+ENV PORT=5000
+EXPOSE 5000
+CMD exec gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 8 main:app
